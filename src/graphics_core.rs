@@ -1,19 +1,20 @@
 use crate::Ili9341;
 use embedded_graphics_core::{
-    pixelcolor::{raw::RawU16, Rgb565},
+    pixelcolor::{PixelColor, raw::RawU16, Rgb565},
     prelude::*,
     primitives::Rectangle,
 };
 
-impl<IFACE, RESET> OriginDimensions for Ili9341<IFACE, RESET> {
+impl<IFACE, RESET, C> OriginDimensions for Ili9341<IFACE, RESET, C> {
     fn size(&self) -> Size {
         Size::new(self.width() as u32, self.height() as u32)
     }
 }
 
-impl<IFACE, RESET> DrawTarget for Ili9341<IFACE, RESET>
+impl<IFACE, RESET, C> DrawTarget for Ili9341<IFACE, RESET, C>
 where
     IFACE: display_interface::WriteOnlyDataCommand,
+    C: PixelColor + Into<Rgb565>,
 {
     type Error = display_interface::DisplayError;
 
@@ -85,4 +86,10 @@ where
     fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
         self.clear_screen(RawU16::from(color).into_inner())
     }
+
+    fn fill_solid(&mut self, area: &Rectangle, color: Self::Color) -> Result<(), Self::Error> {
+        self.fill_contiguous(area, core::iter::repeat(color))
+    }
+
+    
 }

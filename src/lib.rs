@@ -25,8 +25,10 @@
 //! ```
 //!
 //! [display-interface-spi crate]: https://crates.io/crates/display-interface-spi
-use embedded_hal::delay::DelayUs;
-use embedded_hal::digital::OutputPin;
+use embedded_graphics_core::pixelcolor::Rgb565;
+use embedded_graphics_core::prelude::PixelColor;
+use embedded_hal::blocking::delay::{DelayMs};
+use embedded_hal::digital::v2::OutputPin;
 
 use core::iter::once;
 use display_interface::DataFormat::{U16BEIter, U8Iter};
@@ -124,18 +126,21 @@ pub enum ModeState {
 /// - As soon as a pixel is received, an internal counter is incremented,
 ///   and the next word will fill the next pixel (the adjacent on the right, or
 ///   the first of the next row if the row ended)
-pub struct Ili9341<IFACE, RESET> {
+pub struct Ili9341<IFACE, RESET, C> {
     interface: IFACE,
     reset: RESET,
     width: usize,
     height: usize,
     landscape: bool,
+    color_space: Option<core::marker::PhantomData<C>>,
 }
 
-impl<IFACE, RESET> Ili9341<IFACE, RESET>
+impl<IFACE, RESET, C> Ili9341<IFACE, RESET, C>
 where
     IFACE: WriteOnlyDataCommand,
     RESET: OutputPin,
+    C: PixelColor + Into<Rgb565>,
+    
 {
     pub fn new<DELAY, SIZE, MODE>(
         interface: IFACE,
@@ -145,7 +150,7 @@ where
         _display_size: SIZE,
     ) -> Result<Self>
     where
-        DELAY: DelayUs,
+        DELAY: DelayMs<u16>,
         SIZE: DisplaySize,
         MODE: Mode,
     {
@@ -155,6 +160,7 @@ where
             width: SIZE::WIDTH,
             height: SIZE::HEIGHT,
             landscape: false,
+            color_space: None,
         };
 
         // Do hardware reset by holding reset low for at least 10us
@@ -193,7 +199,7 @@ where
     }
 }
 
-impl<IFACE, RESET> Ili9341<IFACE, RESET>
+impl<IFACE, RESET, C> Ili9341<IFACE, RESET, C>
 where
     IFACE: WriteOnlyDataCommand,
 {
@@ -390,7 +396,7 @@ where
     }
 }
 
-impl<IFACE, RESET> Ili9341<IFACE, RESET> {
+impl<IFACE, RESET, C> Ili9341<IFACE, RESET, C> {
     /// Get the current screen width. It can change based on the current orientation
     pub fn width(&self) -> usize {
         self.width
